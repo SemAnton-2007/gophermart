@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+//go:embed *.up.sql
 var migrationsFS embed.FS
 
 func ApplyMigrations(db *sql.DB) error {
