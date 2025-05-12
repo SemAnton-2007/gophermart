@@ -15,6 +15,11 @@ import (
 var migrationsFS embed.FS
 
 func ApplyMigrations(db *sql.DB) error {
+	_, err := fs.ReadDir(migrationsFS, ".")
+	if err != nil {
+		return fmt.Errorf("failed to access migrations: %w", err)
+	}
+
 	files, err := fs.ReadDir(migrationsFS, ".")
 	if err != nil {
 		return fmt.Errorf("failed to read migrations: %w", err)
@@ -36,7 +41,8 @@ func ApplyMigrations(db *sql.DB) error {
 
 		log.Printf("Applying migration: %s", file.Name())
 		if _, err := db.Exec(string(migrationSQL)); err != nil {
-			return fmt.Errorf("failed to apply migration %s: %w", file.Name(), err)
+			return fmt.Errorf("failed to apply migration %s: %w\nSQL: %s",
+				file.Name(), err, string(migrationSQL))
 		}
 	}
 
