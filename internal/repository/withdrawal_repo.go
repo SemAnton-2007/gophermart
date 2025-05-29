@@ -21,7 +21,7 @@ func NewWithdrawalRepository(db *Database) *WithdrawalRepository {
 }
 
 func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Withdrawal) error {
-	tx, err := r.db.db.BeginTx(ctx, nil)
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
