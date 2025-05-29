@@ -3,8 +3,13 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"gophermart/internal/model"
+)
+
+var (
+	ErrInsufficientFunds = errors.New("insufficient funds")
 )
 
 type WithdrawalRepository struct {
@@ -34,7 +39,7 @@ func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Wit
 	}
 
 	if currentBalance < withdrawal.Sum {
-		return sql.ErrNoRows
+		return ErrInsufficientFunds
 	}
 
 	insertQuery := `INSERT INTO ` + withdrawalsTable + ` (` +
@@ -84,6 +89,18 @@ func (r *WithdrawalRepository) GetByUserID(ctx context.Context, userID int64) ([
 	}
 
 	return withdrawals, nil
+}
+
+func (r *WithdrawalRepository) CalculateWithdrawn(ctx context.Context, userID int64) (float64, error) {
+	var withdrawn float64
+	query := `SELECT COALESCE(SUM(` + withdrawalsColumnSum + `), 0) FROM ` +
+		withdrawalsTable + ` WHERE ` + withdrawalsColumnUserID + ` = $1`
+
+	err := r.db.db.QueryRowContext(ctx, query, userID).Scan(&withdrawn)
+	if err != nil {
+		return 0, err
+	}
+	return withdrawn, nil
 }
 
 func (r *WithdrawalRepository) DB() *sql.DB {

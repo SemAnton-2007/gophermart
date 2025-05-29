@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"time"
 
@@ -27,7 +26,7 @@ func (s *WithdrawalService) CreateWithdrawal(ctx context.Context, userID int64, 
 	}
 
 	err := s.withdrawalRepo.Create(ctx, withdrawal)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, repository.ErrInsufficientFunds) {
 		return errors.New("insufficient funds")
 	}
 	if err != nil {
