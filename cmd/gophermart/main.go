@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"gophermart/internal/model"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +17,7 @@ import (
 	"gophermart/internal/repository"
 	"gophermart/internal/service"
 	"gophermart/internal/service/accrual"
+	"gophermart/internal/worker"
 	"gophermart/migrations"
 )
 
@@ -62,7 +62,8 @@ func main() {
 		Handler: r,
 	}
 
-	go processOrders(context.Background(), orderService, accrualClient)
+	orderProcessor := worker.NewOrderProcessor(orderService, accrualClient)
+	go orderProcessor.Run(context.Background())
 
 	go func() {
 		log.Printf("starting server on %s", cfg.RunAddress)
@@ -80,44 +81,5 @@ func main() {
 
 	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("server shutdown error: %v", err)
-	}
-}
-
-func processOrders(ctx context.Context, orderService *service.OrderService, accrualClient *accrual.AccrualClient) {
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			orders, err := orderService.GetUnprocessedOrders(ctx)
-			if err != nil {
-				log.Printf("failed to get unprocessed orders: %v", err)
-				continue
-			}
-
-			for _, order := range orders {
-				resp, err := accrualClient.GetAccrual(ctx, order.Number)
-				if err != nil {
-					log.Printf("failed to get accrual for order %s: %v", order.Number, err)
-					continue
-				}
-
-				if resp == nil {
-					continue
-				}
-
-				order.Status = resp.Status
-				if resp.Status == model.OrderStatusProcessed {
-					order.Accrual = resp.Accrual
-				}
-
-				if err := orderService.UpdateOrder(ctx, &order); err != nil {
-					log.Printf("failed to update order %s: %v", order.Number, err)
-				}
-			}
-		}
 	}
 }
