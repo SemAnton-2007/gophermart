@@ -34,7 +34,7 @@ func main() {
 		log.Fatalf("failed to apply migrations: %v", err)
 	}
 
-	tokenAuth := jwtauth.New("HS256", []byte("secret"), nil)
+	tokenAuth := jwtauth.New("HS256", []byte(cfg.JWTSecret), nil)
 
 	userRepo := repository.NewUserRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
