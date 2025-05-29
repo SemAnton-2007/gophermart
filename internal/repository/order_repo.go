@@ -17,10 +17,19 @@ func NewOrderRepository(db *Database) *OrderRepository {
 }
 
 func (r *OrderRepository) Create(ctx context.Context, order *model.Order) error {
-	query := `INSERT INTO orders (number, status, user_id, uploaded_at) 
-	          VALUES ($1, $2, $3, $4) 
-	          ON CONFLICT (number) DO NOTHING`
-	result, err := r.db.db.ExecContext(ctx, query, order.Number, order.Status, order.UserID, order.UploadedAt)
+	query := `INSERT INTO ` + ordersTable + ` (` +
+		ordersColumnNumber + `, ` +
+		ordersColumnStatus + `, ` +
+		ordersColumnUserID + `, ` +
+		ordersColumnUploadedAt + `) VALUES ($1, $2, $3, $4)
+		ON CONFLICT (` + ordersColumnNumber + `) DO NOTHING`
+
+	result, err := r.db.db.ExecContext(ctx, query,
+		order.Number,
+		order.Status,
+		order.UserID,
+		order.UploadedAt,
+	)
 	if err != nil {
 		return err
 	}
@@ -37,7 +46,14 @@ func (r *OrderRepository) Create(ctx context.Context, order *model.Order) error 
 }
 
 func (r *OrderRepository) GetByNumber(ctx context.Context, number string) (*model.Order, error) {
-	query := `SELECT number, status, accrual, uploaded_at, user_id FROM orders WHERE number = $1`
+	query := `SELECT ` + ordersColumnNumber + `, ` +
+		ordersColumnStatus + `, ` +
+		ordersColumnAccrual + `, ` +
+		ordersColumnUploadedAt + `, ` +
+		ordersColumnUserID + ` FROM ` +
+		ordersTable + ` WHERE ` +
+		ordersColumnNumber + ` = $1`
+
 	order := &model.Order{}
 	err := r.db.db.QueryRowContext(ctx, query, number).Scan(
 		&order.Number,
@@ -56,9 +72,14 @@ func (r *OrderRepository) GetByNumber(ctx context.Context, number string) (*mode
 }
 
 func (r *OrderRepository) GetByUserID(ctx context.Context, userID int64) ([]model.Order, error) {
-	query := `SELECT number, status, accrual, uploaded_at FROM orders 
-	          WHERE user_id = $1 
-	          ORDER BY uploaded_at DESC`
+	query := `SELECT ` + ordersColumnNumber + `, ` +
+		ordersColumnStatus + `, ` +
+		ordersColumnAccrual + `, ` +
+		ordersColumnUploadedAt + ` FROM ` +
+		ordersTable + ` WHERE ` +
+		ordersColumnUserID + ` = $1 ORDER BY ` +
+		ordersColumnUploadedAt + ` DESC`
+
 	rows, err := r.db.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
@@ -82,15 +103,23 @@ func (r *OrderRepository) GetByUserID(ctx context.Context, userID int64) ([]mode
 }
 
 func (r *OrderRepository) Update(ctx context.Context, order *model.Order) error {
-	query := `UPDATE orders SET status = $1, accrual = $2 WHERE number = $3`
+	query := `UPDATE ` + ordersTable + ` SET ` +
+		ordersColumnStatus + ` = $1, ` +
+		ordersColumnAccrual + ` = $2 WHERE ` +
+		ordersColumnNumber + ` = $3`
+
 	_, err := r.db.db.ExecContext(ctx, query, order.Status, order.Accrual, order.Number)
 	return err
 }
 
 func (r *OrderRepository) GetUnprocessedOrders(ctx context.Context) ([]model.Order, error) {
-	query := `SELECT number, status, user_id FROM orders 
-	          WHERE status IN ('NEW', 'PROCESSING') 
-	          ORDER BY uploaded_at`
+	query := `SELECT ` + ordersColumnNumber + `, ` +
+		ordersColumnStatus + `, ` +
+		ordersColumnUserID + ` FROM ` +
+		ordersTable + ` WHERE ` +
+		ordersColumnStatus + ` IN ('NEW', 'PROCESSING') ORDER BY ` +
+		ordersColumnUploadedAt
+
 	rows, err := r.db.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err

@@ -23,9 +23,12 @@ func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Wit
 	defer tx.Rollback()
 
 	var currentBalance float64
-	err = tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(accrual), 0) - 
-	                             COALESCE((SELECT SUM(sum) FROM withdrawals WHERE user_id = $1), 0) 
-	                             FROM orders WHERE user_id = $1`, withdrawal.UserID).Scan(&currentBalance)
+	balanceQuery := `SELECT COALESCE(SUM(` + ordersColumnAccrual + `), 0) - 
+	               COALESCE((SELECT SUM(` + withdrawalsColumnSum + `) FROM ` + withdrawalsTable + ` 
+	               WHERE ` + withdrawalsColumnUserID + ` = $1), 0)
+	               FROM ` + ordersTable + ` WHERE ` + ordersColumnUserID + ` = $1`
+
+	err = tx.QueryRowContext(ctx, balanceQuery, withdrawal.UserID).Scan(&currentBalance)
 	if err != nil {
 		return err
 	}
@@ -34,9 +37,18 @@ func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Wit
 		return sql.ErrNoRows
 	}
 
-	query := `INSERT INTO withdrawals (order_number, sum, processed_at, user_id) 
-	          VALUES ($1, $2, $3, $4)`
-	_, err = tx.ExecContext(ctx, query, withdrawal.Order, withdrawal.Sum, withdrawal.ProcessedAt, withdrawal.UserID)
+	insertQuery := `INSERT INTO ` + withdrawalsTable + ` (` +
+		withdrawalsColumnOrderNumber + `, ` +
+		withdrawalsColumnSum + `, ` +
+		withdrawalsColumnProcessedAt + `, ` +
+		withdrawalsColumnUserID + `) VALUES ($1, $2, $3, $4)`
+
+	_, err = tx.ExecContext(ctx, insertQuery,
+		withdrawal.Order,
+		withdrawal.Sum,
+		withdrawal.ProcessedAt,
+		withdrawal.UserID,
+	)
 	if err != nil {
 		return err
 	}
@@ -45,9 +57,13 @@ func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Wit
 }
 
 func (r *WithdrawalRepository) GetByUserID(ctx context.Context, userID int64) ([]model.Withdrawal, error) {
-	query := `SELECT order_number, sum, processed_at FROM withdrawals 
-	          WHERE user_id = $1 
-	          ORDER BY processed_at DESC`
+	query := `SELECT ` + withdrawalsColumnOrderNumber + `, ` +
+		withdrawalsColumnSum + `, ` +
+		withdrawalsColumnProcessedAt + ` FROM ` +
+		withdrawalsTable + ` WHERE ` +
+		withdrawalsColumnUserID + ` = $1 ORDER BY ` +
+		withdrawalsColumnProcessedAt + ` DESC`
+
 	rows, err := r.db.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
