@@ -29,10 +29,10 @@ func (r *UserRepository) GetByLogin(ctx context.Context, login string) (*model.U
 	query := `SELECT id, login, password_hash FROM users WHERE login = $1`
 	user := &model.User{}
 	err := r.db.db.QueryRowContext(ctx, query, login).Scan(&user.ID, &user.Login, &user.PasswordHash)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return user, nil
@@ -42,10 +42,10 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, er
 	query := `SELECT id, login, password_hash FROM users WHERE id = $1`
 	user := &model.User{}
 	err := r.db.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Login, &user.PasswordHash)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return user, nil
