@@ -17,29 +17,29 @@ import (
 )
 
 type Handler struct {
-	cfg             *config.Config
-	authService     *service.AuthService
-	orderService    *service.OrderService
-	withdrawService *service.WithdrawalService
-	accrualClient   *accrual.AccrualClient
-	tokenAuth       *jwtauth.JWTAuth
+	cfg               *config.Config
+	authService       *service.AuthService
+	orderService      *service.OrderService
+	withdrawalService *service.WithdrawalService
+	accrualClient     *accrual.AccrualClient
+	tokenAuth         *jwtauth.JWTAuth
 }
 
 func NewHandler(
 	cfg *config.Config,
 	authService *service.AuthService,
 	orderService *service.OrderService,
-	withdrawService *service.WithdrawalService,
+	withdrawalService *service.WithdrawalService,
 	accrualClient *accrual.AccrualClient,
 	tokenAuth *jwtauth.JWTAuth,
 ) *Handler {
 	return &Handler{
-		cfg:             cfg,
-		authService:     authService,
-		orderService:    orderService,
-		withdrawService: withdrawService,
-		accrualClient:   accrualClient,
-		tokenAuth:       tokenAuth,
+		cfg:               cfg,
+		authService:       authService,
+		orderService:      orderService,
+		withdrawalService: withdrawalService,
+		accrualClient:     accrualClient,
+		tokenAuth:         tokenAuth,
 	}
 }
 
@@ -186,7 +186,7 @@ func (h *Handler) GetBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	withdrawn, err := h.withdrawService.CalculateWithdrawn(r.Context(), userID)
+	withdrawn, err := h.withdrawalService.CalculateWithdrawn(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
@@ -223,7 +223,7 @@ func (h *Handler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.withdrawService.CreateWithdrawal(r.Context(), userID, req.Order, req.Sum)
+	err := h.withdrawalService.CreateWithdrawal(r.Context(), userID, req.Order, req.Sum)
 	if err != nil {
 		if err.Error() == "insufficient funds" {
 			http.Error(w, "insufficient funds", http.StatusPaymentRequired)
@@ -240,7 +240,7 @@ func (h *Handler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 	_, claims, _ := jwtauth.FromContext(r.Context())
 	userID := int64(claims["user_id"].(float64))
 
-	withdrawals, err := h.withdrawService.GetUserWithdrawals(r.Context(), userID)
+	withdrawals, err := h.withdrawalService.GetUserWithdrawals(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
