@@ -62,8 +62,11 @@ func main() {
 		Handler: r,
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	orderProcessor := worker.NewOrderProcessor(orderService, accrualClient)
-	go orderProcessor.Run(context.Background())
+	go orderProcessor.Run(ctx)
 
 	go func() {
 		log.Printf("starting server on %s", cfg.RunAddress)
@@ -76,10 +79,12 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("server shutdown error: %v", err)
 	}
 }
