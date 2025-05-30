@@ -41,7 +41,7 @@ func main() {
 	withdrawalRepo := repository.NewWithdrawalRepository(db)
 
 	authService := service.NewAuthService(userRepo)
-	orderService := service.NewOrderService(orderRepo)
+	orderService := service.NewOrderService(orderRepo, withdrawalRepo)
 	withdrawService := service.NewWithdrawalService(withdrawalRepo)
 	accrualClient := accrual.NewAccrualClient(cfg.AccrualSystemAddress)
 

@@ -16,11 +16,15 @@ var (
 )
 
 type OrderService struct {
-	orderRepo *repository.OrderRepository
+	orderRepo      *repository.OrderRepository
+	withdrawalRepo *repository.WithdrawalRepository
 }
 
-func NewOrderService(orderRepo *repository.OrderRepository) *OrderService {
-	return &OrderService{orderRepo: orderRepo}
+func NewOrderService(orderRepo *repository.OrderRepository, withdrawalRepo *repository.WithdrawalRepository) *OrderService {
+	return &OrderService{
+		orderRepo:      orderRepo,
+		withdrawalRepo: withdrawalRepo,
+	}
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, userID int64, number string) error {
@@ -63,13 +67,5 @@ func (s *OrderService) UpdateOrder(ctx context.Context, order *model.Order) erro
 }
 
 func (s *OrderService) CalculateCurrentBalance(ctx context.Context, userID int64) (float64, error) {
-	var balance float64
-	query := `SELECT COALESCE(SUM(accrual), 0) -
-              COALESCE((SELECT SUM(amount) FROM withdrawals WHERE user_id = $1), 0)
-              FROM orders WHERE user_id = $1 AND status = 'PROCESSED'`
-	err := s.orderRepo.DB().QueryRowContext(ctx, query, userID).Scan(&balance)
-	if err != nil {
-		return 0, err
-	}
-	return balance, nil
+	return s.withdrawalRepo.GetBalance(ctx, userID)
 }

@@ -27,13 +27,7 @@ func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Wit
 	}
 	defer tx.Rollback()
 
-	var currentBalance float64
-	balanceQuery := `SELECT COALESCE(SUM(` + ordersColumnAccrual + `), 0) -
-	               COALESCE((SELECT SUM(` + withdrawalsColumnAmount + `) FROM ` + withdrawalsTable + `
-	               WHERE ` + withdrawalsColumnUserID + ` = $1), 0)
-	               FROM ` + ordersTable + ` WHERE ` + ordersColumnUserID + ` = $1`
-
-	err = tx.QueryRowContext(ctx, balanceQuery, withdrawal.UserID).Scan(&currentBalance)
+	currentBalance, err := r.GetBalance(ctx, withdrawal.UserID)
 	if err != nil {
 		return err
 	}
@@ -101,6 +95,24 @@ func (r *WithdrawalRepository) CalculateWithdrawn(ctx context.Context, userID in
 		return 0, err
 	}
 	return withdrawn, nil
+}
+
+func (r *WithdrawalRepository) GetBalance(ctx context.Context, userID int64) (float64, error) {
+	var currentBalance float64
+	balanceQuery := `SELECT COALESCE(SUM(` + ordersColumnAccrual + `), 0) FROM ` + ordersTable +
+		` WHERE ` + ordersColumnUserID + ` = $1 AND ` + ordersColumnStatus + ` = 'PROCESSED'`
+
+	err := r.db.db.QueryRowContext(ctx, balanceQuery, userID).Scan(&currentBalance)
+	if err != nil {
+		return 0, err
+	}
+
+	withdrawn, err := r.CalculateWithdrawn(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return currentBalance - withdrawn, nil
 }
 
 func (r *WithdrawalRepository) DB() *sql.DB {
