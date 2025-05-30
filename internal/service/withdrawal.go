@@ -42,7 +42,7 @@ func (s *WithdrawalService) GetUserWithdrawals(ctx context.Context, userID int64
 
 func (s *WithdrawalService) CalculateWithdrawn(ctx context.Context, userID int64) (float64, error) {
 	var withdrawn float64
-	query := `SELECT COALESCE(SUM(sum), 0) FROM withdrawals WHERE user_id = $1`
+	query := `SELECT COALESCE(SUM(amount), 0) FROM withdrawals WHERE user_id = $1`
 	err := s.withdrawalRepo.DB().QueryRowContext(ctx, query, userID).Scan(&withdrawn)
 	if err != nil {
 		return 0, err

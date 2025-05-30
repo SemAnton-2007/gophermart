@@ -4,7 +4,7 @@ const (
 	withdrawalsTable = "withdrawals"
 
 	withdrawalsColumnOrderNumber = "order_number"
-	withdrawalsColumnSum         = "sum"
+	withdrawalsColumnAmount      = "amount"
 	withdrawalsColumnProcessedAt = "processed_at"
 	withdrawalsColumnUserID      = "user_id"
 )

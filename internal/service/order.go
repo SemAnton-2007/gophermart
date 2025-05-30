@@ -64,8 +64,8 @@ func (s *OrderService) UpdateOrder(ctx context.Context, order *model.Order) erro
 
 func (s *OrderService) CalculateCurrentBalance(ctx context.Context, userID int64) (float64, error) {
 	var balance float64
-	query := `SELECT COALESCE(SUM(accrual), 0) - 
-              COALESCE((SELECT SUM(sum) FROM withdrawals WHERE user_id = $1), 0)
+	query := `SELECT COALESCE(SUM(accrual), 0) -
+              COALESCE((SELECT SUM(amount) FROM withdrawals WHERE user_id = $1), 0)
               FROM orders WHERE user_id = $1 AND status = 'PROCESSED'`
 	err := s.orderRepo.DB().QueryRowContext(ctx, query, userID).Scan(&balance)
 	if err != nil {

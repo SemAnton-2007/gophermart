@@ -28,8 +28,8 @@ func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Wit
 	defer tx.Rollback()
 
 	var currentBalance float64
-	balanceQuery := `SELECT COALESCE(SUM(` + ordersColumnAccrual + `), 0) - 
-	               COALESCE((SELECT SUM(` + withdrawalsColumnSum + `) FROM ` + withdrawalsTable + ` 
+	balanceQuery := `SELECT COALESCE(SUM(` + ordersColumnAccrual + `), 0) -
+	               COALESCE((SELECT SUM(` + withdrawalsColumnAmount + `) FROM ` + withdrawalsTable + `
 	               WHERE ` + withdrawalsColumnUserID + ` = $1), 0)
 	               FROM ` + ordersTable + ` WHERE ` + ordersColumnUserID + ` = $1`
 
@@ -44,7 +44,7 @@ func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Wit
 
 	insertQuery := `INSERT INTO ` + withdrawalsTable + ` (` +
 		withdrawalsColumnOrderNumber + `, ` +
-		withdrawalsColumnSum + `, ` +
+		withdrawalsColumnAmount + `, ` +
 		withdrawalsColumnProcessedAt + `, ` +
 		withdrawalsColumnUserID + `) VALUES ($1, $2, $3, $4)`
 
@@ -63,7 +63,7 @@ func (r *WithdrawalRepository) Create(ctx context.Context, withdrawal *model.Wit
 
 func (r *WithdrawalRepository) GetByUserID(ctx context.Context, userID int64) ([]model.Withdrawal, error) {
 	query := `SELECT ` + withdrawalsColumnOrderNumber + `, ` +
-		withdrawalsColumnSum + `, ` +
+		withdrawalsColumnAmount + `, ` +
 		withdrawalsColumnProcessedAt + ` FROM ` +
 		withdrawalsTable + ` WHERE ` +
 		withdrawalsColumnUserID + ` = $1 ORDER BY ` +
@@ -93,7 +93,7 @@ func (r *WithdrawalRepository) GetByUserID(ctx context.Context, userID int64) ([
 
 func (r *WithdrawalRepository) CalculateWithdrawn(ctx context.Context, userID int64) (float64, error) {
 	var withdrawn float64
-	query := `SELECT COALESCE(SUM(` + withdrawalsColumnSum + `), 0) FROM ` +
+	query := `SELECT COALESCE(SUM(` + withdrawalsColumnAmount + `), 0) FROM ` +
 		withdrawalsTable + ` WHERE ` + withdrawalsColumnUserID + ` = $1`
 
 	err := r.db.db.QueryRowContext(ctx, query, userID).Scan(&withdrawn)
